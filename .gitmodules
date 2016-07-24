@@ -1,0 +1,30 @@
+[submodule "ColdPress"]
+	path = ColdPress
+	url = git@github.com:ProjectCORVID/ColdPress.git
+[submodule "utility"]
+	path = utility
+	url = git@github.com:ProjectCORVID/utility.git
+[submodule "WorldGen"]
+	path = WorldGen
+	url = git@github.com:ProjectCORVID/WorldGen.git
+[submodule "Setting"]
+	path = Setting
+	url = git@github.com:ProjectCORVID/Setting.git
+[submodule "World-Finch"]
+	path = World-Finch
+	url = git@github.com:ProjectCORVID/World-Finch.git
+[submodule "System"]
+	path = System
+	url = git@github.com:ProjectCORVID/System.git
+[submodule "Core"]
+	path = Core
+	url = git@github.com:ProjectCORVID/Core.git
+[submodule "World-The-Manor"]
+	path = World-The-Manor
+	url = git@github.com:ProjectCORVID/World-The-Manor.git
+[submodule "docs"]
+	path = docs
+	url = git@github.com:ProjectCORVID/docs.git
+[submodule "community"]
+	path = community
+	url = git@github.com:ProjectCORVID/community.git
