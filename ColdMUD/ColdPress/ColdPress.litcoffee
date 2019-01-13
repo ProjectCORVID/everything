@@ -3,12 +3,7 @@
 ## ColdMUD assumptions
 
 - All changes to objects persisted at end or suspension of task.
- - Task execution starts with network input or resumption of suspended tasks.
-
-- Handy sockets
- - So here's our hook
-  - the engine handles the network and tasks
-  - bounding with persistence is just book-keeping
+ - Task execution starts with user input or system tick event
 
 ## ColdObjRef
 
@@ -28,13 +23,4 @@ reference so that the definer knows who the sender is.
           args: args
           self: @referred
           definer: @referred.matchMethod @referrer, methodName, args
-
-# Role Oriented Programming (ROP)
-
-ColdEngine is built on a ROP system such that, for example, ColdObject has the
-roles ColdInheritor and ColdMessageHandler. ColdMessageHandler has the roles
-ColdStateContainer, ColdMessageReceiver, ColdMethodDefiner and
-ColdMessageSender.
-
-## Roles, how do?
 
