@@ -1,0 +1,12 @@
+{
+  "name": "JouleScript",
+  "version": "0.0.0",
+  "description": "See https://en.wikipedia.org/wiki/Joule_(programming_language)",
+  "main": "lib/index.coffee",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,4 @@
+--ui exports
+--require should
+--compilers coffee:coffee-script/register
+--reporter dot

@@ -1,0 +1,49 @@
+comment = ''' We are syntatic elements which can be identified without context. '''
+
+syntax = ->
+  tokens =
+    whitespace : /// (?:\s)+ ///
+    comment    : anyOf oneLineComment, bracketedComment
+
+    # Because ColdMUD was fun ...
+    string     : (enclosed '"', '"' ) maybeQuotedChar
+    symbol     : (enclosed "'", ""  ) maybeQuotedChar
+    error      : (enclosed "~", ""  ) maybeQuotedChar
+
+    identifier : /(?:[a-z0-9][a-z0-9_]*)/i
+
+    number     : anyOf float, integer
+    value      : anyOf number, string, symbol, identifier
+
+    # No arg-passing syntax because we're trying reverse-polish style
+    anonFn     : (enclosed  '{', '}') list expr, /;|\n/
+
+    list       : (enclosed  '[', ']') list expr, /,/
+    dict       : (enclosed '#[', ']') list expr, /,/
+
+  { enclosed, list, anyOf } = require './util'
+
+  oneLineComment   = /\s*#\s(.*?)\n/
+  bracketedComment = (enclosed '###', '###') /(.*)/
+
+  maybeQuotedChar  =
+    /// ( (?: \\ . )
+        | (?     . )
+        ) ///
+
+  base    = /// 0[box]?      /// # Alt bases: Binary, Octal and heX
+  digits  = /// \\d[0-9_,]*  ///
+  integer = ///  (? (? [-+]      ? )
+                    (? #{base}   ? )
+                    (? #{digits}   ) )
+            ///
+
+  float   = ///
+              (?<float>
+                (?:   #{integer} )
+              \.(     #{digits}  )
+                ([Ee] #{integer} )?
+              )
+            ///
+
+

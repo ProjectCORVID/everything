@@ -1,0 +1,137 @@
+    Indented text which is not inside a block is a comment.
+
+    The only pre-defined word
+    @W.define exec: -> @_exec @pop
+
+    The syntax is handled by the bootstrapping interpreter.
+
+```
+  @W.define
+    blockLevel    : 0
+    commentLevel  : 0
+    inputBuffer   : 0
+
+    def           : ->
+      [value, name] = [@pop, @pop]
+      @W.define [name]: value
+
+    '!'           : ->
+      unless (slot = @pop) instanceof ChaosSlot
+        throw new @E.NotASlot
+
+      value = @pop
+
+      slot.set value
+
+    '@': ->
+      unless (slot = @pop) instanceof ChaosSlot
+        throw new @E.NotASlot
+
+      @push slot.get()
+
+    '.': ->
+      [ key, value ] = [ @pop, @pop ]
+
+      @push value.get key
+
+    ':': ->
+      [ key, value ] = [ @pop, @pop ]
+
+      @push value[key]
+
+
+    inc           : -> @data[@data.length - 1]++
+    dec           : -> @data[@data.length - 1]--
+
+    '+'           : -> @data[@data.length - 2] += @pop
+    '-'           : -> @data[@data.length - 2] -= @pop
+    '*'           : -> @data[@data.length - 2] *= @pop
+    '/'           : -> @data[@data.length - 2] /= @pop
+    '%'           : -> @data[@data.length - 2] %= @pop
+
+    '/*'          : ->
+      [d, n] = [@pop, @pop]
+      @push (n - (r = n % d)) / d
+      @push r
+      return
+
+    dup           : ->  @push  @top
+    rdup          : -> @rpush @rtop
+
+    drop          : ->  @pop
+    rdrop         : -> @rpop
+
+    '>RS'         : -> @rpush @pop
+    '<RS'         : -> @push @rpop
+
+    STACK         : -> @push @data
+    RSTACK        : -> @push @return
+    ERRORS        : -> @push @E
+    SYMBOLS       : -> @push @S
+    DICTIONARY    : -> @push @W
+    MACHINE       : -> @push @
+
+    # ( slot word -- ) Mutate a slot's value
+    apply         : ->
+      [word, slot] = [@pop, @pop]
+      @push slot.get()
+      @_exec word
+      slot.set @pop
+
+    # ( slot -- )
+    incSlot       : @block 'inc apply'.split(' ').map (w) => @word w
+    decSlot       : @block 'dec apply'.split(' ').map (w) => @word w
+
+    and           : -> @push not not (@pop and @pop)
+    or            : -> @push not not (@pop or  @pop)
+    not           : -> @push not @pop
+
+    'if'          : -> # ( executable boolean -- )
+                      if @pop
+                        @_exec @pop
+                      else
+                        @pop
+
+    'while'       : -> # ( loop test -- )
+                    [test, loop] = [new ChaosValue(@pop), new ChaosValue(@pop)]
+
+                    while test.exec @
+                      loop.exec @
+
+    '{'           : @block [
+                      @word "blockLevel"
+                      @word "incSlot"
+                      @block []
+                    ]
+
+    '}'           : @block [
+                      @word "blockLevel"
+                      @word "dup"
+                      @word "decSlot"
+                      @word "apply"
+                      "def" @word 'word'
+                      @word "swap"
+                      1
+                      @word "<"
+                      @word "if"
+                    ]
+
+``` exec
+
+'<<  ``` @push @pop << @pop ``` def
+'>>  ``` @push @pop >> @pop ``` def
+
+'repeat { ( block n -- )
+ dup 0 >
+ { dec swap }
+ dup
+ if
+} def
+
+'pick { ( vn .. v3 v2 v1 n -- vn .. v3 v2 v1 vn )
+  stack swap . @
+} def
+
+    ( object string -- ... )
+'-> { . @ exec } def
+
