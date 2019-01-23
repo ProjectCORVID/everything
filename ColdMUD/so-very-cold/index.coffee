@@ -1,8 +1,7 @@
 
-CObjectGen  = require 'object'
-CStackFrame = require 'stack-frame'
+DB          = ( require 'db'          ) {}
+CObject     = ( require 'object'      ) DB
+CMethod     = ( require 'method'      ) {CObject}
 
-CObject = new CObjectGen DB = []
-
-CStackFrame.dispatchSystemEvent 'starting'
-
+#CStackFrame = ( require 'stack-frame' ) DB
+#CStackFrame.dispatchSystemEvent 'starting'

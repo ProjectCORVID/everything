@@ -1,3 +1,4 @@
+
 # DB is an Array.
 module.exports = (DB) ->
   {length, longestKey, accessors} = require './util'
@@ -7,13 +8,39 @@ module.exports = (DB) ->
   DATA    = Symbol()
   METHODS = Symbol()
 
+  normalizeObjectReference = (idOrObject) ->
+    id = idOrObject
+
+    if id instanceof Number              then id = id.valueOf()
+    if id instanceof String              then id = id.valueOf()
+
+    if 'string' is typeof id             then id = parseInt id
+    if 'number' is typeof id             then o  = DB[id] else (o = id; id = o[ID])
+
+    return {o, id}
+
+  resolveObject = (idOrObject) ->
+    {o, id} = normalizeObjectReference idOrObject
+
+    if 'object' isnt typeof o
+      throw new Error "Could not resolve object with reference provided (#{idOrObject})"
+
+    if o[ID] isnt id
+      throw new Error "Object store integrity error: ##{id}[ID] is #{o[ID]}, expected #{id}"
+
+    {o, id}
+
+  obj = (id) -> resolveObject(id).o
+
+  id  = (o)  -> resolveObject(o ).id
+
+
   class CObject
+    ###
     @thaw: (sourceLineIterable) ->
       sourceLineIterator = sourceLineIterable()
 
-      o                  = null
-      id                 = null
-      keyword            = null
+      o = id = keyword = null
 
       loop
         {done, value: line} = sourceLineIterator.next()
@@ -59,38 +86,46 @@ module.exports = (DB) ->
               if done
                 throw new Error "Reached end of lines in middle of definition of method #{id}:#{name}"
 
-            o.setMethod name, source.join '\n'
+            o.setHandlers [name]: CMethod.thaw source.join '\n'
+    ###
 
     constructor: (parentIds = []) ->
-      @[ID]      = DB.push @
+      @[ID]      = (DB.push @) - 1
       @[PARENTS] = parentIds
       @[DATA]    = {}
       @[METHODS] = {}
 
-    destroy:                      -> DB[@[ID]] = null
+    destroy: -> DB[@[ID]] = null
 
-    # Intentionally missing: add/remove parent
-    #
-    # To re-parent a branch you have to re-create all the children under the
-    # new parents and update all the references. It will make method caching
-    # more efficient and force such changes to be more ops-friendly.
+    setParents: (newParents, moreParents...) ->
+      newParents = [newParents] unless Array.isArray newParents
+      newParents = newParents
+        .concat moreParents...
+        .map id
 
-    get: (definerId, name)        -> (@[DATA][definer])?     [name]
-    set: (definerId, name, value) -> (@[DATA][definer] ?= {})[name] = value
-    delAll: (definerId)           -> (@[DATA][definer]  = {})
+      @delAll p for p in @[PARENTS] when p not in newParents
 
-    delMethod: (name)             -> @[METHODS][name] = undefined
-    setMethod: (name, def)        -> @[METHODS][name] = def
+      @[PARENTS] = newParents
+      @[DATA][p] = {} for p in newParents
+      @
 
-    findMethod: (name) ->
+    get:    (definer, name)        -> (@[DATA][id definer] ?= {})[name]
+    set:    (definer, name, value) -> (@[DATA][id definer] ?= {})[name] = value
+    delAll: (definer)              -> (@[DATA][id definer]  = {})
+
+    delHandlers: (names...)      -> @[METHODS][name] = undefined for name         in names
+    setHandlers: (nameAndMethod) -> @[METHODS][name] = method    for name, method of namesAndMethods
+
+    findHandler: (name) ->
       if def = @[METHODS][name]
         return definer: @[ID], method: def
 
-      for parent in @parents
+      for parent in @[PARENTS].map obj
         if found = parent.findMethod name
           return found
 
       return
+
 
     freeze: (lineReceiver) ->
       addLine = (typeAndData) ->
@@ -122,8 +157,12 @@ module.exports = (DB) ->
         addLine ['  ']: line for line in def.source.split '\n'
         addLine ['.' ]: '\n'
 
-  createContext = (receiver, definer) ->
-    contest = accessors {},
-      receiver: -> receiver
-      definer:  -> definer
+  Object.assign CObject, {normalizeObjectReference, resolveObject, obj, id}
+
+  return CObject
+
+  #createContext = (receiver, definer) ->
+  #  contest = accessors {},
+  #    receiver: -> receiver
+  #    definer:  -> definer
 

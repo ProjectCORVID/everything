@@ -1,6 +1,9 @@
+module.exports = (DB) ->
+  $sys = DB[0]
+
   class CStackFrame
     @dispatchSystemEvent: (message, args) ->
-      receiver = definer = 0
+      receiver = definer = $sys
 
       if stack = new CStackFrame {receiver, definer, message, args}
         throw "CStackFrame.dispatchSystemEvent not implemented..."
@@ -25,7 +28,7 @@
             @message, @args
           }}"
 
-      @context = createContext {@receiver, @definer}
+      #@context = createContext {@receiver, @definer}
       #...
       
     call: (target, message, args) ->
@@ -34,8 +37,7 @@
         newTop = new CStackFrame {prev: @, target, definer, message, args}
         definer
 
-  #accessors CStackFrame::,
-  #  sender: -> @prev?.receiver
-  #  caller: -> @prev?.definer
+    #accessors CStackFrame::,
+    #  sender: -> @prev?.receiver
+    #  caller: -> @prev?.definer
 
-module.exports = CStackFrame
