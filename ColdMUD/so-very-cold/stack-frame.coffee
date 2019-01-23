@@ -1,4 +1,10 @@
   class CStackFrame
+    @dispatchSystemEvent: (message, args) ->
+      receiver = definer = 0
+
+      if stack = new CStackFrame {receiver, definer, message, args}
+        throw "CStackFrame.dispatchSystemEvent not implemented..."
+
     constructor: ({
           @prev
           @receiver, @message, @args
@@ -10,18 +16,17 @@
         found = @receiver.findMethod @message
       else if not @method
         found = @definer.findMethod @message
-
-      @definer ?= found.definer
+        @definer ?= found.definer
+      else unless @method = @definer.findMethod @message
+        throw new Error "Could not create frame from:
+          #{util.inspect {
+            @prev
+            @receiver, @definer
+            @message, @args
+          }}"
 
       @context = createContext {@receiver, @definer}
-
-      throw new Error "Could not create frame from:
-        #{util.inspect {
-          @prev
-          @receiver, @definer
-          @message, @args
-          @method = @definer.findMethod @message
-        }}"
+      #...
       
     call: (target, message, args) ->
       if found = target.findMethod message
@@ -29,13 +34,8 @@
         newTop = new CStackFrame {prev: @, target, definer, message, args}
         definer
 
-  accessors CStackFrame::,
-    sender: -> @prev?.receiver
-    caller: -> @prev?.definer
+  #accessors CStackFrame::,
+  #  sender: -> @prev?.receiver
+  #  caller: -> @prev?.definer
 
-  dispatchSystemEvent = (message, args) ->
-    receiver = definer = 0
-
-    if stack = new CStackFrame {receiver, definer, message, args}
-
-  return {CObject, dispatchSystemEvent}
+module.exports = CStackFrame

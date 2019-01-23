@@ -2,9 +2,7 @@
 CObjectGen  = require 'object'
 CStackFrame = require 'stack-frame'
 
-dispatchSystemEvent = (message, args) ->
-  receiver = definer = 0
+CObject = new CObjectGen DB = []
 
-  if stack = new CStackFrame {receiver, definer, message, args}
+CStackFrame.dispatchSystemEvent 'starting'
 
-Object.assign module.exports, {CObjectGen, dispatchSystemEvent}
