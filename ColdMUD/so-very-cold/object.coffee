@@ -1,28 +1,14 @@
+ID      = Symbol()
+PARENTS = Symbol()
+DATA    = Symbol()
+METHODS = Symbol()
 
-# DB is an Array.
 module.exports = (DB) ->
   {length, longestKey, accessors} = require './util'
 
-  ID      = Symbol()
-  PARENTS = Symbol()
-  DATA    = Symbol()
-  METHODS = Symbol()
-
-  normalizeObjectReference = (idOrObject) ->
-    id = idOrObject
-
-    if id instanceof Number              then id = id.valueOf()
-    if id instanceof String              then id = id.valueOf()
-
-    if 'string' is typeof id             then id = parseInt id
-    if 'number' is typeof id             then o  = DB[id] else (o = id; id = o[ID])
-
-    return {o, id}
-
   resolveObject = (idOrObject) ->
-    {o, id} = normalizeObjectReference idOrObject
-
-    if 'object' isnt typeof o
+    unless   o = DB.lookupId id = idOrObject or
+            id = DB.idOf      o = idOrObject
       throw new Error "Could not resolve object with reference provided (#{idOrObject})"
 
     if o[ID] isnt id
@@ -34,68 +20,16 @@ module.exports = (DB) ->
 
   id  = (o)  -> resolveObject(o ).id
 
-
   class CObject
-    ###
-    @thaw: (sourceLineIterable) ->
-      sourceLineIterator = sourceLineIterable()
-
-      o = id = keyword = null
-
-      loop
-        {done, value: line} = sourceLineIterator.next()
-
-        break    if done
-        continue if not (line = line.trim()) or line[0] is ' '
-
-        [keyword, values...] = line.split ' '
-
-        switch keyword
-          when 'object'
-            if 'object' isnt typeof o = DB[id = values[0]]
-              o = new CObject
-
-              if o[ID] isnt id
-                o[ID] = id
-                DB.pop()
-                DB[id] = o
-
-          when 'parents'
-            parentIds = values.map (p) -> parseInt p
-
-            o[PARENTS] = parentIds
-
-          when 'var'
-            o = o ? new CObject []
-
-            [definer, name] = values
-
-            valueStart      = line.indexOf(' ' + name + ' ') + name.length + 2
-            valueJSON       = line[valueStart..]
-            value           = JSON.parse valueJSON
-
-            o.set parseInt(definer), name, value
-
-          when 'method'
-            [name] = values
-            source = []
-
-            while line isnt '.'
-              {done, value: line} = sourceLineIterator.next()
-
-              if done
-                throw new Error "Reached end of lines in middle of definition of method #{id}:#{name}"
-
-            o.setHandlers [name]: CMethod.thaw source.join '\n'
-    ###
-
     constructor: (parentIds = []) ->
-      @[ID]      = (DB.push @) - 1
+      @[ID]      = DB.add @
       @[PARENTS] = parentIds
       @[DATA]    = {}
       @[METHODS] = {}
 
-    destroy: -> DB[@[ID]] = null
+    destroy: -> DB.delete @, @[ID]
+
+    parents: -> @[PARENTS].map (p) -> p
 
     setParents: (newParents, moreParents...) ->
       newParents = [newParents] unless Array.isArray newParents
@@ -157,12 +91,61 @@ module.exports = (DB) ->
         addLine ['  ']: line for line in def.source.split '\n'
         addLine ['.' ]: '\n'
 
-  Object.assign CObject, {normalizeObjectReference, resolveObject, obj, id}
+  Object.assign CObject, {resolveObject, obj, id}
 
   return CObject
 
-  #createContext = (receiver, definer) ->
-  #  contest = accessors {},
-  #    receiver: -> receiver
-  #    definer:  -> definer
 
+
+###
+    @thaw: (sourceLineIterable) ->
+      sourceLineIterator = sourceLineIterable()
+
+      o = id = keyword = null
+
+      loop
+        {done, value: line} = sourceLineIterator.next()
+
+        break    if done
+        continue if not (line = line.trim()) or line[0] is ' '
+
+        [keyword, values...] = line.split ' '
+
+        switch keyword
+          when 'object'
+            if 'object' isnt typeof o = DB[id = values[0]]
+              o = new CObject
+
+              if o[ID] isnt id
+                o[ID] = id
+                DB.pop()
+                DB[id] = o
+
+          when 'parents'
+            parentIds = values.map (p) -> parseInt p
+
+            o[PARENTS] = parentIds
+
+          when 'var'
+            o = o ? new CObject []
+
+            [definer, name] = values
+
+            valueStart      = line.indexOf(' ' + name + ' ') + name.length + 2
+            valueJSON       = line[valueStart..]
+            value           = JSON.parse valueJSON
+
+            o.set parseInt(definer), name, value
+
+          when 'method'
+            [name] = values
+            source = []
+
+            while line isnt '.'
+              {done, value: line} = sourceLineIterator.next()
+
+              if done
+                throw new Error "Reached end of lines in middle of definition of method #{id}:#{name}"
+
+            o.setHandlers [name]: CMethod.thaw source.join '\n'
+###
