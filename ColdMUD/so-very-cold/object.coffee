@@ -1,151 +1,114 @@
-ID      = Symbol()
-PARENTS = Symbol()
-DATA    = Symbol()
-METHODS = Symbol()
+comment = """
+"""
 
-module.exports = (DB) ->
-  {length, longestKey, accessors} = require './util'
+# TODO: Can we refactor out the object store? Maybe move create/destroy to the
+# store and provide CObject to the store as a dependency?
 
-  resolveObject = (idOrObject) ->
-    unless   o = DB.lookupId id = idOrObject or
-            id = DB.idOf      o = idOrObject
-      throw new Error "Could not resolve object with reference provided (#{idOrObject})"
+DB = null
 
-    if o[ID] isnt id
-      throw new Error "Object store integrity error: ##{id}[ID] is #{o[ID]}, expected #{id}"
+resolveObject = (idOrObject) ->
+  if   o = DB.lookupId id = idOrObject or
+      id = DB.idOf      o = idOrObject
+    return {o, id}
 
-    {o, id}
+  # throw new Error "Could not resolve object with reference provided (#{idOrObject})"
 
-  obj = (id) -> resolveObject(id).o
+  #if o.id isnt id
+  #  throw new Error "Object store integrity error: ##{id}.id is #{o.id}, expected #{id}"
 
-  id  = (o)  -> resolveObject(o ).id
+obj = (id) -> resolveObject(id)?.o
+id  = (o)  -> resolveObject(o )?.id
 
+
+objArgs = -> (objs) ->
+  [].concat objs...
+    .map id
+
+module.exports = { CObject }
   class CObject
+    @inject: ({objectStore}) ->
+      if DB then throw new Error "Cannot re-inject"
+
+      (DB = objectStore)
+        .init()
+
     constructor: (parentIds = []) ->
-      @[ID]      = DB.add @
-      @[PARENTS] = parentIds
-      @[DATA]    = {}
-      @[METHODS] = {}
+      @id        = DB.add @
 
-    destroy: -> DB.delete @, @[ID]
+      @_parents  = new Set
+      @_children = new Set
 
-    parents: -> @[PARENTS].map (p) -> p
+      @_data     = {}
+      @_handlers = {}
+
+    goingAway: ->
+      for c from @_children
+        c.delParents @
+        c.addParents p for p from @_parents
+
+      for p from @_parents
+        p.children.delete @
+
+      return
+
+    parents:  -> @_parents .values()
+    children: -> @_children.values()
+
+    addParents: (parentLists...) ->
+      for p in objArgs parentLists when not @_parents.has p
+        @_parents .add p
+        p.children.add @
+
+        @_data[p] = {}
+      return
+
+    delParents: (parentLists...) ->
+      for p in objArgs parentLists when     @_parents.has p
+        @_parents .delete p
+        p.children.delete @
+
+        @_data[p] = undefined
+      return
 
     setParents: (newParents, moreParents...) ->
-      newParents = [newParents] unless Array.isArray newParents
-      newParents = newParents
-        .concat moreParents...
-        .map id
+      @delParents p for p from  @_parents when p not in newParents
+      @addParents p for p from newParents when p not in  @_parents
+      return
 
-      @delAll p for p in @[PARENTS] when p not in newParents
+    get: (definer, name)        -> @_data[id definer][name]
+    set: (definer, name, value) -> @_data[id definer][name] = value
 
-      @[PARENTS] = newParents
-      @[DATA][p] = {} for p in newParents
-      @
-
-    get:    (definer, name)        -> (@[DATA][id definer] ?= {})[name]
-    set:    (definer, name, value) -> (@[DATA][id definer] ?= {})[name] = value
-    delAll: (definer)              -> (@[DATA][id definer]  = {})
-
-    delHandlers: (names...)      -> @[METHODS][name] = undefined for name         in names
-    setHandlers: (nameAndMethod) -> @[METHODS][name] = method    for name, method of namesAndMethods
+    delHandlers: (names...)       -> @_handlers[name] = undefined for name          in names
+    setHandlers: (nameAndHandler) -> @_handlers[name] = handler   for name, handler of namesAndHandlers
 
     findHandler: (name) ->
-      if def = @[METHODS][name]
-        return definer: @[ID], method: def
+      if method = @_handlers[name]
+        return definer: @id, handler: method
 
-      for parent in @[PARENTS].map obj
-        if found = parent.findMethod name
+      for parent in @_parents.map obj
+        if found = parent.findHandler name
           return found
 
       return
 
+    toString: ->
+      "##{@_id}#{
+        if (names = @_data[1]?.names)?.length
+          " (#{names[0]})"
+        else
+          ""
+      }"
 
-    freeze: (lineReceiver) ->
-      addLine = (typeAndData) ->
-        for type, data of typeAndData
-          lineReceiver.write "#{type.padEnd 7} #{data}\n"
+    send: (source, message, args) ->
+      unless found = @findHandler message
+        throw new Error "handler for #{message} not found on #{@toString()}"
 
-      @freezeConstruction addLine
-      @freezeData         addLine; lineReceiver.write '\n'
-      @freezeMethods      addLine; lineReceiver.write '\n\n'
+      sender = source.receiver
+      caller = source.definer
 
-    freezeConstruction: (addLine) ->
-      addLine object:  @[ID]
-      addLine parents: @[PARENTS].join " " if length @[PARENTS]
+      found.call Object.assign {sender, caller, receiver, definer, message, args}
 
-    freezeData: (addLine) ->
-      data = @[DATA]
+  return Object.assign CObject, {obj, id}, forTesting: {resolveObject}
 
-      freezeParentData = (parent) ->
-        width = longestKey vars = data[parent]
+Object.assign module.exports, {comment}
 
-        for prop, val of vars
-          addLine var: "#{parent} #{prop.padEnd width} #{JSON.stringify val}"
-
-    freezeMethods: (addLine) ->
-      methods = @[METHODS]
-
-      for name, def of methods
-        addLine method: name
-        addLine ['  ']: line for line in def.source.split '\n'
-        addLine ['.' ]: '\n'
-
-  Object.assign CObject, {resolveObject, obj, id}
-
-  return CObject
-
-
-
-###
-    @thaw: (sourceLineIterable) ->
-      sourceLineIterator = sourceLineIterable()
-
-      o = id = keyword = null
-
-      loop
-        {done, value: line} = sourceLineIterator.next()
-
-        break    if done
-        continue if not (line = line.trim()) or line[0] is ' '
-
-        [keyword, values...] = line.split ' '
-
-        switch keyword
-          when 'object'
-            if 'object' isnt typeof o = DB[id = values[0]]
-              o = new CObject
-
-              if o[ID] isnt id
-                o[ID] = id
-                DB.pop()
-                DB[id] = o
-
-          when 'parents'
-            parentIds = values.map (p) -> parseInt p
-
-            o[PARENTS] = parentIds
-
-          when 'var'
-            o = o ? new CObject []
-
-            [definer, name] = values
-
-            valueStart      = line.indexOf(' ' + name + ' ') + name.length + 2
-            valueJSON       = line[valueStart..]
-            value           = JSON.parse valueJSON
-
-            o.set parseInt(definer), name, value
-
-          when 'method'
-            [name] = values
-            source = []
-
-            while line isnt '.'
-              {done, value: line} = sourceLineIterator.next()
-
-              if done
-                throw new Error "Reached end of lines in middle of definition of method #{id}:#{name}"
-
-            o.setHandlers [name]: CMethod.thaw source.join '\n'
-###

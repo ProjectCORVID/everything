@@ -1,7 +1,24 @@
 
-DB          = ( require 'db'          ) {}
-CObject     = ( require 'object'      ) DB
-CMethod     = ( require 'method'      ) {CObject}
+ColdDB       =
+CoffeeMethod =
+CObject      =
 
-#CStackFrame = ( require 'stack-frame' ) DB
-#CStackFrame.dispatchSystemEvent 'starting'
+  null
+
+
+do ->
+  { CMethod } = require 'method'
+
+  { NamedObjectStore
+    CoffeeMethod
+    CObject
+  } = Object.assign {},
+    require 'db'
+    require 'compiler-coffee'
+    require 'object'
+
+  CoffeeMethod.inject { CMethod }
+
+objectStore = new NamedObjectStore {CObject, CMethod: CoffeeMethod}
+CObject.inject {objectStore}
+

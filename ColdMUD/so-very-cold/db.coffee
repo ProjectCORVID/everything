@@ -1,148 +1,113 @@
 # It's a function so we can pass in options later.
 
-class ObjectStore
-  @comment: """
-    I am (currently) an object <=> id bi-map.
+module.exports = ->
+  class ObjectStore
+    @comment: """
+      I am (currently) an object <=> id bi-map.
 
-    ::add(o)    - generates a new id and associates it with 'o'
-    ::delete(o) - removes the object and its id
+        ::create(name: [parents]) - generates a new id and associates it with 'o'
+        ::delete(o)               - removes the object and its id
 
-    ::lookupId(n) - returns the corresponding object
-    ::idOf(o)     - returns the id of 'o'
+        ::lookupId(id)            - returns the corresponding object
+        ::idOf(o)                 - returns the id of 'o'
 
-    ::allObjects() - returns an iterator for all known objects
-    ::allIds()     - returns 
-  """
+        ::allObjects()            - returns an iterator for all known objects
+        ::allIds()                - returns
 
-  constructor: (@persister) ->
-    @_live = new Map
-    @_byId = []
+      I am constructed with injected delegates:
+      
+        store = new ObjectStore {CObject, CMethod}
 
-  add: (o) ->
-    unless id = @_live.get o
-      id = (@_byId.push o) - 1
-      @_live.set o, id
-    id
+        CObject:
+          - parent/child relations
+          - message -> method mapping/inheritance
+          - instance data management
 
-  delete: (o) ->
-    if id = @_live.get o
-      @_byId[id] = undefined
-      @_live.delete o
-      @
+        CMethod:
+          - Compiler
+          - Callable object
 
-  lookupId: (id) -> @_byId[id]
-  idOf:     (o)  -> @_live.get o
+      In the future I may also provide persistence of some sort.
 
-  allObjects: -> @_live.keys()
-  allIds:     -> Object.keys @_byId
+    """
 
-  [Symbol.iterator]: ->
-    for object, id from @_live
-      yield {id, object}
+    constructor: (depends = {}) ->
+      { @CObject
+        @CMethod
+      } = depends
 
-class NamedObjectsStore extends ObjectStore
-  @comment: """
-    I add a [names] <=> object mapping to ObjectStore
-  """
-  constructor: (args...) ->
-    super args...
+      @_live = new Map
+      @_byId = []
 
-    @objectToNames = new Map
-    @namesToObjects = {}
+    create: (nameAndParents) ->
+      for name, parents of nameAndParents
+        @_live.set (o  = new @CObject parents),
+                    id = (@_byId.push o) - 1
+        o
 
-  add: (o) ->
-    @objectToNames[o] = new Set
-    super o
+    destroy: (o) ->
+      try
+        o.goingAway()
 
-  delete: (o) ->
-    @delNames (@objectToNames[o] ? [])...
-    super o
-
-  addNames: (namesAndObjects) ->
-    if (collisions = (name for name, object of namesAndObjects when @namesToObjects[name])).length
-      throw new Error "name collisions: #{collisions}"
-
-    for name, object of namesAndObjects
-      @objectToNames[object].add name
-      @namesToObjects[name] = object
-
-    @
-
-  delNames: (names...) ->
-    for name in names when o = @namesToObjects[name]
-      @objectToNames[o].delete name
-      @namesToObjects[name] = undefined
-
-    @
-
-  lookup: (name) -> @namesToObjects[name]
-
-class ColdDB extends NamedObjectsStore
-  @comment: """
-    Add ::init(dependencies)
-  """
-
-  init: ({CObject, CMethod}) ->
-    DB = @
-
-    method = (code) -> new CMethod code
-
-    if sys  = (@lookup 'sys' ) and
-       root = (@lookup 'root')
-      return @
-
-    [sys, root, cobject] = [0, 1].map -> new CObject
-    @addNames {sys, root, cobject}
-
-    sys.setParents [root]
-
-    cobject.setHandlers
-      ancestors: method (o) ->
-        ancestors = []
-        pending = o.
-
-    root.setHandlers
-      init: ->
-        sys
-          .ancestors @
-          .filter (a) -> a.definesMethod 'init_child'
-          .forEach (a) -> a.init_sending_child()
-
+      if id = @_live.get o
+        @_byId[id] = undefined
+        @_live.delete o
         @
 
-      init_sending_child: ->
-        #@setOn sender, names: new Set
+    lookupId: (id) -> @_byId[id]
+    idOf:     (o)  -> @_live.get o
 
-      names:     -> DB.objectToNames[@]
-      firstName: -> return name for name from @names()
+    allObjects: -> @_live.keys()
+    allIds:     -> Object.keys @_byId
 
-      toString: ->
-        "##{@id receiver}#{
-          if name = await receiver.firstName() then " (#{name})" else ''
-        }"
+    [Symbol.iterator]: ->
+      for object, id from @_live
+        yield {id, object}
 
+  class NamedObjectsStore extends ObjectStore
+    @comment: """
+      I add a [names] <=> object mapping to the ObjectStore class.
 
-    #sys.setHandlers
-    #  addNames: method (nameAndObject) ->
-    #    assignments =
-    #      for name, obj of nameAndObject
-    #        if inUse = @objectsByName[name]
-    #          if inUse isnt obj
-    #            throw new Error "name '#{name}' already assigned to #{@id inUse}"
-    #        else
-    #          [name, obj]
+      Should this instead be implemeted
+        - with a mixin?
+        - with delegation?
+        - as a decorator?
+        - some other way?
+    """
 
-    #    for [name, obj] in assignments.filter (o) -> o
-    #      @objectsByName[name] = obj
+    constructor: (args...) ->
+      super args...
 
-    #    @
+      @objectToNames = new Map
+      @namesToObjects = {}
 
-    #  rmNames: method (names...) ->
-    #    @objectsByName[name] = undefined for name in [].concat names...
+    create: (args...) ->
+      o = super args...
+      @objectToNames[o] = new Set
+      o
 
-      starting: method -> console.log "starting event triggered"
+    destroy: (o) ->
+      super o
+      @delNames (@objectToNames[o])...
+      @objectToNames.delete o
 
-    sys.call starting: []
+    lookupName: (name) -> @namesToObjects[name]
 
-module.exports = -> new ColdDB
+    addNames: (namesAndObjects) ->
+      if (collisions = (name for name, object of namesAndObjects when @namesToObjects[name])).length
+        throw new Error "name collisions: #{collisions}"
 
+      for name, object of namesAndObjects
+        @objectToNames[object].add name
+        @namesToObjects[name] = object
+
+      @
+
+    delNames: (names...) ->
+      for name in names when o = @namesToObjects[name]
+        @objectToNames[o].delete name
+        @namesToObjects[name] = undefined
+
+      @
+
+  {ObjectStore, NamedObjectStore}
