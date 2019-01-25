@@ -42,19 +42,18 @@ The function defining a method handler may expect:
 
         # read-only vars
 
-        @definer  # class defining the handler
-        @receiver # like `this` for Cold objects
-        @caller   # definer  in calling method/handler
-        @sender   # receiver in calling method/handler
+        definer               # class defining the handler
+        receiver              # like `this` for Cold objects
+        caller                # definer  in calling method/handler
+        sender                # receiver in calling method/handler
 
-        # setter/getters
-        @get          'name'       #  this[DATA][definer][name]
-        @getOn child, 'name'       # child[DATA][definer][name]
+        # instance var access
+        @name                 #  this[DATA][definer][name]
+        (child)::name         # child[DATA][definer][name]
 
-        @set           name: value #  this[DATA][definer][name] = value
-        @setOn child,  name: value # child[DATA][definer][name] = value
+        @name         = value #  this[DATA][definer][name] = value
+        (child)::name = value # child[DATA][definer][name] = value
 
-        # Method behaviors
         # All method calls are asynchronous
 
         try
@@ -63,9 +62,18 @@ The function defining a method handler may expect:
           # do stuff with error
 
         # also...
-        @private definer, method: args...
+        @.privateMethod args...
 
 ```
+
+## Changes from CoffeeScript
+
+-     `@member` refers to a private var called `member`
+- `obj::member` refers to the private `member` var of `obj`
+- `@[nameExpr]` refers to a private var with the name the expression evaluates to
+- `$name`       refers to an object     with the given name
+- `$[nameExpr]  refers to an object     with the name the expression evaluates to
+- 
 
 ## Why are method calls asynchronous?
 
