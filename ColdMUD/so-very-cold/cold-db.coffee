@@ -1,4 +1,5 @@
 export class ColdDB
+<<<<<<< Updated upstream
   constructor: ({@CObject, @CMethod, @ObjectStore})->
     @db = new ObjectStore {@CObject}
     @propSym = Symbol 'ColdDB data'
@@ -7,6 +8,7 @@ export class ColdDB
   create: (args...) ->
     o = @db.create args...
     (o[@propSym] = {}).names = new Set
+
     o
 
   destroy: (o) ->
@@ -51,24 +53,25 @@ export class ColdDB
 
     @addNames {sys, root, cobject}
 
-    sys.setParents [root]
+    CObject.setParents sys,     [root]
+    CObject.setParents cobject, [root]
 
     cobject.setHandlers
+      parents:   method (o) -> CObject.parents o
+
       ancestors: method (o) ->
-        ancestors = []
-        pending = o.
+        [].concat ( await @parents o
+                      .map (parent) ->
+                        await @ancestors parent
+                  )..., o
+          .reduce (a, p) -> if p in a then a else a.concat p
+
+      setParents: method (child, parents) ->
+        CObject.setParents child, parents
 
     root.setHandlers
-      init: ->
-        sys
-          .ancestors @
-          .filter (a) -> a.definesMethod 'init_child'
-          .forEach (a) -> a.init_sending_child()
-
-        @
-
-      init_sending_child: ->
-        #@setOn sender, names: new Set
+      init: (child) ->
+        @setOn child, owner: null
 
       names:     -> @objectToNames[@]
       firstName: -> return name for name from @names()
@@ -81,3 +84,4 @@ export class ColdDB
     sys.setHandlers
       starting: method -> console.log "starting event triggered"
 
+    sys.call starting: []
