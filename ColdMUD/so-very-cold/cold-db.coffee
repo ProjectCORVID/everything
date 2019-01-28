@@ -1,80 +1,83 @@
-newPrototype = null
+export class ColdDB
+  constructor: ({@CObject, @CMethod, @ObjectStore})->
+    @db = new ObjectStore {@CObject}
+    @propSym = Symbol 'ColdDB data'
+    @names = {}
 
-module.exports =
-  ColdDB: class ColdDB
-    @comment: """
-      Add ::init(dependencies)
-    """
+  create: (args...) ->
+    o = @db.create args...
+    (o[@propSym] = {}).names = new Set
+    o
 
-    @inject: ({NamedObjectStore}) ->
-      newPrototype = Object.assign {}, NamedObjectStore::, @::
-      :: = newPrototype
-      Object.setPrototypeOf @, NamedObjectStore
+  destroy: (o) ->
+    props = o?[@propSym]
 
-    constructor: (args...) ->
-      unless newPrototype
-        throw new Error "Must inject NamedObjectStore dependency before use"
+    @db.destroy o
 
-      super args...
+    if props
+      @freeName name for name from props.names
 
-    init: ->
-      method = (code) -> new CMethod code
+    @
 
-      if sys  = (@lookup 'sys' ) and
-         root = (@lookup 'root')
-        return @
+  allObjects: -> @db.allObjects()
+  allIds:     -> @db.allIds()
 
-      [sys, root, cobject] = [0, 1].map -> new CObject
-      @addNames {sys, root, cobject}
+  lookupId:   (id) -> @db.lookupId id
+  idOf:       (o)  -> @db.idOf     o
 
-      sys.setParents [root]
+  lookupName: (name) -> @names[name]
+  namesOf:    (o)    -> copySet o[@propSym].names.values()
 
-      cobject.setHandlers
-        ancestors: method (o) ->
-          ancestors = []
-          pending = o.
+  freeName:   (name) ->
+    try @names[name][@propSym].names.del name
 
-      root.setHandlers
-        init: ->
-          sys
-            .ancestors @
-            .filter (a) -> a.definesMethod 'init_child'
-            .forEach (a) -> a.init_sending_child()
+    @names[name] ?= undefined
 
-          @
+    return
 
-        init_sending_child: ->
-          #@setOn sender, names: new Set
+  addNames: (nameAndObject) ->
+    for name, obj of nameAndObject
+      @freeName name
+      @names[name] = obj
+      obj[@propSym].names.add name
 
-        names:     -> @objectToNames[@]
-        firstName: -> return name for name from @names()
+  init: ->
+    method = (code) -> new CMethod code
 
-        toString: ->
-          "##{@id receiver}#{
-            if name = await receiver.firstName() then " (#{name})" else ''
-          }"
+    [@$sys, @$root, @$cobject] =
+      [sys,   root,   cobject] =
+      [  0,      1,         2]
+        .map -> new CObject
 
+    @addNames {sys, root, cobject}
 
-      #sys.setHandlers
-      #  addNames: method (nameAndObject) ->
-      #    assignments =
-      #      for name, obj of nameAndObject
-      #        if inUse = @objectsByName[name]
-      #          if inUse isnt obj
-      #            throw new Error "name '#{name}' already assigned to #{@id inUse}"
-      #        else
-      #          [name, obj]
+    sys.setParents [root]
 
-      #    for [name, obj] in assignments.filter (o) -> o
-      #      @objectsByName[name] = obj
+    cobject.setHandlers
+      ancestors: method (o) ->
+        ancestors = []
+        pending = o.
 
-      #    @
+    root.setHandlers
+      init: ->
+        sys
+          .ancestors @
+          .filter (a) -> a.definesMethod 'init_child'
+          .forEach (a) -> a.init_sending_child()
 
-      #  rmNames: method (names...) ->
-      #    @objectsByName[name] = undefined for name in [].concat names...
+        @
 
-        starting: method -> console.log "starting event triggered"
+      init_sending_child: ->
+        #@setOn sender, names: new Set
 
-      sys.call starting: []
+      names:     -> @objectToNames[@]
+      firstName: -> return name for name from @names()
 
+      toString: ->
+        "##{@id receiver}#{
+          if name = await receiver.firstName() then " (#{name})" else ''
+        }"
+
+    sys.setHandlers
+      starting: method -> console.log "starting event triggered"
 

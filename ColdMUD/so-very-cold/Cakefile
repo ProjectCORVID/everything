@@ -1,0 +1,30 @@
+cs = require 'coffeescript'
+
+compile = (filePath, options) ->
+  { destDir = 'compiled'
+  } = options
+
+  basename = path.basename filePath, '.coffee'
+  destFile = path.resolve destDir, basename + '.mjs'
+
+  js = cs.compile await fs.readFile filePath
+
+  await fs.writeFile destFile, js
+
+find = (start, fn) ->
+  stat = await fs.stat start
+
+  if stat.isFile()
+    await fn start
+  else
+    for entry in await fs.readdir start when entry not in ['.', '..']
+      [entry]: await find path.resolve(start, entry), fn
+
+task 'build', '', (options = {}) ->
+  find 'src', (path) ->
+    await stat = fs.stat path
+
+    if stat.isFile()
+      compile path, options
+
+

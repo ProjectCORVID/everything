@@ -1,24 +1,7 @@
+import { ColdDB       } from './cold-db.mjs'
+import { CoffeeMethod } from './compiler-coffee.mjs'
+import { CObject      } from './object.mjs'
 
-ColdDB       =
-CoffeeMethod =
-CObject      =
-
-  null
-
-
-do ->
-  { CMethod } = require 'method'
-
-  { NamedObjectStore
-    CoffeeMethod
-    CObject
-  } = Object.assign {},
-    require 'db'
-    require 'compiler-coffee'
-    require 'object'
-
-  CoffeeMethod.inject { CMethod }
-
-objectStore = new NamedObjectStore {CObject, CMethod: CoffeeMethod}
-CObject.inject {objectStore}
-
+objectStore = new ColdDB {CObject, CoffeeMethod}
+(objectStore.lookupName 'sys')
+  .call startup: []
