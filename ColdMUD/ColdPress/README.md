@@ -2,27 +2,54 @@
 
 ColdMUD in Coffee
 
-# Cold Object Protocol (COP)
+- Single inheritance
+- object methods are themselves
+- none of the protections offered by ColdMUD are available
+ - private data
+ - access to sender()/caller()
+ - etc
 
-## Objects
+# Core Objects
 
-- COP
-  - The protocol itself handles low-level operations which should only be visible to $sys
+- $root
+ - $sys
+ - $cobject
+ - $vr
+  - $concept
+   - .noun: subject or object of a question or observation
+   - .verb: dimension of a question or observation
+    - .create
+    - .destroy
+    - .morph
+    - .associate
+    - .disassociate
+   - .modifier: concept decorator such as 'any', 'some' or 'more'
+   - .word: maps to concepts
+   - .conjunction: 'and', 'or', etc
+   - .definition: observation about a word or words
+   - .dictionary: collection of definitions
+   - .language: collection of dictionaries
+  - $thing
+   - .portal
+   - .collection
+   - .area
+   - .actor
+  - $observation: a statement about a world
+   - .event: a canonical observation
+   - .hypothetical
+  - $world: a container of $vr stuff
 
-  - Some methods
-    - .create() => an object handle
-    - .get definerHandle, names...
-    - .set definerHandle, {[name]: value, ...}
-    - .lookupName name => an object handle OR undefined
-    - .addParent    handle,  parentHandle
-    - .removeParent handle,  parentHandle
-    - .setParents   handle, [parentHandles...]
+# System Objects
 
-  - Object handles
-    - Primitive COP operations take object handles as arguments to identify the entities to be operated on
-    - This aspect of the protocol exists to allow us to protect privileged state in the future
-    - In the short term, such handles will be the objects themselves
+## Nouns
 
-## Implementation details
-
-
+- fundamental
+  - person
+  - connector
+- locational
+  - place
+  - container
+  - portal
+  - wall
+- descriptive/behavioral
+  - material
