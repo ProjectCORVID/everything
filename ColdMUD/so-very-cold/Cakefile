@@ -1,30 +1,56 @@
-cs = require 'coffeescript'
+cs       = require 'coffeescript'
+
+{config} = require 'package.json'
+
+compile = find = rmDir
+
+   
+task 'clean', '', (options) ->
+  rmDir options.buildDir ? config.buildDir
+
+task 'test',  '', (options) ->
+
+task 'build', '', (options) ->
+  await invoke 'clean'
+  await fs.mkdir buildDir = options.buildDir ? config.buildDir
+
+  find 'src', (path, stat) ->
+    if stat.isFile()
+      compile path, options
+    else if stat.isDirectory()
+      await fs.mkdir path.join buildDir, path
+
 
 compile = (filePath, options) ->
-  { destDir = 'compiled'
-  } = options
+  buildDir = options.buildDir ? config.buildDir
 
   basename = path.basename filePath, '.coffee'
-  destFile = path.resolve destDir, basename + '.mjs'
+  destFile = path.resolve buildDir, basename + '.mjs'
 
-  js = cs.compile await fs.readFile filePath
+  fs.readFile filePath
+    .then (src) -> fs.writeFile destFile, cs.compile src
 
-  await fs.writeFile destFile, js
-
-find = (start, fn) ->
+find = (start, fn, afterFn) ->
   stat = await fs.stat start
 
-  if stat.isFile()
-    await fn start
-  else
+  if 'function' is typeof fn
+    await fn start, stat
+
+  results =
+  if stat.isDirectory()
     for entry in await fs.readdir start when entry not in ['.', '..']
       [entry]: await find path.resolve(start, entry), fn
 
-task 'build', '', (options = {}) ->
-  find 'src', (path) ->
-    await stat = fs.stat path
+  if 'funciton' is typeof afterFn
+    await afterFn start, stat
 
-    if stat.isFile()
-      compile path, options
+  return results
 
+rmDir = (path) ->
+  find path, false, (f, stat) ->
+    await
+      if stat.isDirectory()
+        fs.rmdir f
+      else
+        fs.unlink f
 
