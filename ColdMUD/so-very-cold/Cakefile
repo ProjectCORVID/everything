@@ -2,9 +2,9 @@ cs       = require 'coffeescript'
 
 {config} = require 'package.json'
 
-compile = find = rmDir
+# pre-decarations
+compile = find = rmDir = null
 
-   
 task 'clean', '', (options) ->
   rmDir options.buildDir ? config.buildDir
 
@@ -30,24 +30,29 @@ compile = (filePath, options) ->
   fs.readFile filePath
     .then (src) -> fs.writeFile destFile, cs.compile src
 
+readdir = (d) -> fs.readdir d, withFileTypes: true
+
 find = (start, fn, afterFn) ->
-  stat = await fs.stat start
+  if start instanceof fs.Dirent
+    {fullPath: start} = stat = start
+  else
+    stat = fs.stat start
 
   if 'function' is typeof fn
     await fn start, stat
 
-  results =
   if stat.isDirectory()
-    for entry in await fs.readdir start when entry not in ['.', '..']
-      [entry]: await find path.resolve(start, entry), fn
+    for entry in await readdir start when entry.name not in ['.', '..']
+      entry.fullPath = path.resolve start, entry.name
+      await find entry, fn, afterFn
 
   if 'funciton' is typeof afterFn
     await afterFn start, stat
 
-  return results
+  return
 
 rmDir = (path) ->
-  find path, false, (f, stat) ->
+  find path, null, (f, stat) ->
     await
       if stat.isDirectory()
         fs.rmdir f
