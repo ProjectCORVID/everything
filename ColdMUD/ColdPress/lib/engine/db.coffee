@@ -12,11 +12,12 @@ class ColdDB
     @objects[id]
 
   commit: (o) ->
-    @objects[id] = o
+    @objects[o.id] = o
 
   create: ->
-    o = @objects[@dbTop] = new ColdObjectHandle @
-    o.id = @dbTop++
-    o
+    Objects.assign (
+        @objects[id = @dbTop++] =
+          new ColdObjectHandle @
+      ), {id}
 
 

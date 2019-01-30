@@ -6,12 +6,11 @@ fs     = require 'fs'
 
 # 'COP' is Cold Object Protocol
 module.exports = (COP) ->
-  $sys  = COP.create()
-  $root = COP.create()
+  $sys     = COP.create()
+  $root    = COP.create()
+  $cobject = COP.create()
 
-  asser.equal  $sys.id, 0, "First object must have id 0, not #{sys.id}"
-  asser.equal $root.id, 1, "Second object must have id 1, not #{root.id}"
-
-  COP.setParents $sys, [$root]
+  COP.setParents $sys,     [$root]
+  COP.setParents $cobject, [$sys]
 
   (require 'sysAndRoot') COP

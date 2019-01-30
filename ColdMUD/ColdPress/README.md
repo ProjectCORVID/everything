@@ -13,9 +13,13 @@ ColdMUD in Coffee
 
 - $root
  - $sys
- - $cobject
- - $vr
-  - $concept
+  - .cobject
+  - .core
+  - .system
+  - .setting
+  - .world
+ - $core
+  - .concept
    - .noun: subject or object of a question or observation
    - .verb: dimension of a question or observation
     - .create
@@ -29,15 +33,18 @@ ColdMUD in Coffee
    - .definition: observation about a word or words
    - .dictionary: collection of definitions
    - .language: collection of dictionaries
-  - $thing
+  - .thing
    - .portal
    - .collection
    - .area
    - .actor
-  - $observation: a statement about a world
+  - .observation: a statement about a world
    - .event: a canonical observation
    - .hypothetical
-  - $world: a container of $vr stuff
+  - .world: a container of $vr stuff
+  - .system
+  - .setting
+  - .world
 
 # System Objects
 
