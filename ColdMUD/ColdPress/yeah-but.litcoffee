@@ -1,6 +1,10 @@
 # On core definition language
 
-Core modules will be processed in a context which eliminates boilerplate.
+Core modules are processed in a context which eliminates boilerplate. Like how
+cake works, core files are evaluated with useful additions to the global
+namespace.
+
+    o class Example
 
     isa $parent, $otherParent
 

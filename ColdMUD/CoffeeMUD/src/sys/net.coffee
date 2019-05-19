@@ -1,7 +1,7 @@
 net      = require 'net'
 readline = require 'readline'
 
-Object.assign $sys.net
+Object.assign $sys.net,
   session:
     class session
       constructor: ({@server, @socket, @handler = 'login'}) ->
