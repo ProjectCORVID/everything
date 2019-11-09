@@ -1,5 +1,4 @@
 export class ColdDB
-<<<<<<< Updated upstream
   constructor: ({@CObject, @CMethod, @ObjectStore})->
     @db = new ObjectStore {@CObject}
     @propSym = Symbol 'ColdDB data'

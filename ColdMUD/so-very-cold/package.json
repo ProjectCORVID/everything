@@ -1,20 +1,21 @@
 {
-  "name":           "so-very-cold",
-  "version":        "0.0.0",
-  "description":    "",
-  "main":           "index.coffee",
+  "name": "so-very-cold",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.coffee",
   "scripts": {
-    "test":         "cake test"
+    "test": "cake test"
   },
-  "keywords":       [],
-  "author":         "Robert de Forest <robert@defore.st",
-  "license":        "MIT",
+  "keywords": [],
+  "author": "Robert de Forest <robert@defore.st>",
+  "license": "MIT",
   "dependencies": {
-    "coffeescript": "^2.3.2"
+    "coffeescript": "^2.3.2",
+    "kava": "^3.1.0"
   },
   "config": {
-    "sourceDir":    "src",
-    "buildDir":     "build",
-    "testDir":      "t"
+    "sourceDir": "src",
+    "buildDir": "build",
+    "testDir": "t"
   }
 }
